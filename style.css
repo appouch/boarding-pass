@@ -1,0 +1,61 @@
+.emphasis
+{
+    color: #F00;
+    font-weight: bolder;
+}
+
+#header
+{   
+    background-image: url('sky_wallpaper.jpg');
+    font-family: "Times New Roman", Times, serif;
+    font-style: italic;
+    font-weight: bolder;
+    font-size: 200%;
+    letter-spacing: 3px;
+    color: #FFFF00;
+    text-align: center;
+    padding: 5px;
+    
+    margin-right: auto;
+    margin-left: auto;
+}
+
+#qrcode
+{
+    display: block;
+
+    width: 100px;
+    height: 100px;
+    
+    margin: 5% auto 5% auto;
+    border: solid 2px #ff0000;
+    overflow: hidden;
+}
+
+table 
+{
+    width: 50%;
+    margin: 10px auto 10px auto;
+    font-family: "Trebuchet MS", sans-serif;
+    text-align: center; 
+}
+td
+{
+    width: 50%;
+}
+td, th 
+{
+    font-size: 16px;
+    padding: 4px 6px 4px 6px;
+}
+
+label
+{
+    font-weight: bolder;
+    color: #ffffff;
+}
+
+img
+{
+    width: 100%;
+}
