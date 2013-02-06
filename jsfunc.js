@@ -4,7 +4,7 @@ var enterTimes = 0;
 
 var xhr = new XMLHttpRequest();
 //var url = "http://172.22.41.63/Pigeon/MA/00_Demo/R0.2/BoardingPass/Server/index.php";   
-var url = "http://api.Pass2.kuopo.twbbs.org/index.php";
+var url = "http://api.Pass2.pigeonmtk.twbbs.org/index.php";
 var passengerName = "";
 
 // set dynamic CSS style of some elements
