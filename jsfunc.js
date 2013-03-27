@@ -1,13 +1,28 @@
-var myAccount = "1";
-var myPassword = "1";
+document.write('<script type="text/javascript" src="cordova-2.5.0.js"></script>');
+document.write('<script type="text/javascript" src="pigeon-0.4.js"></script>');
+
+var g_account = "1";
+var g_password = "1";
+
+var g_name = null;
+var pigeonEnable = true;
+
 var enterTimes = 0;
+var subChannel = false;	// true to indicate subchannel ok
 
-var xhr = new XMLHttpRequest();
-//var url = "http://172.22.41.63/Pigeon/MA/00_Demo/R0.2/BoardingPass/Server/index.php";   
-var url = "http://api.Pass2.pigeonmtk.twbbs.org/index.php";
-var passengerName = "";
+var CODE = 
+{
+	GATE: 1,
+	TIME: 2,
+	DATE: 4,
+	FLIGHT: 8,
+	SEAT: 16,
+	QRCODE: 32,
+	END: 64
+};
 
-// set dynamic CSS style of some elements
+var currentStatus = 0;	// current get kv status
+
 function setContentSize()
 {
     var headerWidth = document.getElementById("header").offsetWidth;
@@ -20,161 +35,216 @@ function setContentSize()
     document.head.appendChild(sheet);
 }
 
-// remove CSS class
-function removeClass(id)
-{
-    document.getElementById(id).className = "";
-}
-
 // get query string from url
-function queryString(name) 
+function queryString(key) 
 {
 	var AllVars = window.location.search.substring(1);
 	var Vars = AllVars.split("&");
+
 	for (i = 0; i < Vars.length; i++)
 	{
 		var Var = Vars[i].split("=");
-		if (Var[0] == name) 
+		if (Var[0] == key)
             return decodeURI(Var[1]);
 	}
 	return "";
 }
 
-// -------------------------------------
-// query server side for passenger's info
-// -------------------------------------
-
-function queryServer()
-{   
-    var qs = '?passengerName=' + passengerName;
-    
-    if(xhr)
-    {
-        xhr.open("GET", url+qs, true);
-//        xhr.send();
-        xhr.onreadystatechange = queryServerHandler;
-        xhr.send();
-    }
-    else
-    {
-        alert("no xhr took place at all");
-    }
+function removeClass(id)
+{
+    document.getElementById(id).className = "";
 }
 
-function queryServerHandler(evtXHR)
-{
-    if (xhr.readyState == 4)
+
+// ------------------------------
+// get key value
+// ------------------------------
+
+function getKeyValue()
+{    
+    if (pigeonEnable)
     {
-        if (xhr.status == 200)
-        {
-            var response = xhr.responseText;
-            console.log(response);
-            response = JSON.parse(response);
-            parseServerResp(response);
-        }
+		if (!(currentStatus & CODE.GATE))
+			pigeon.getKeyValue(parseRespFromServer, getkv_error_cb, g_account, g_password, g_name+"BoardingGate");
+		else if (!(currentStatus & CODE.TIME))
+			pigeon.getKeyValue(parseRespFromServer, getkv_error_cb, g_account, g_password, g_name+"BoardingTime");
+		else if (!(currentStatus & CODE.DATE))
+			pigeon.getKeyValue(parseRespFromServer, getkv_error_cb, g_account, g_password, g_name+"Date");
+		else if (!(currentStatus & CODE.FLIGHT))
+			pigeon.getKeyValue(parseRespFromServer, getkv_error_cb, g_account, g_password, g_name+"Flight");
+		else if (!(currentStatus & CODE.SEAT))
+			pigeon.getKeyValue(parseRespFromServer, getkv_error_cb, g_account, g_password, g_name+"Seat");		
+		else if (!(currentStatus & CODE.QRCODE))
+			pigeon.getKeyValue(parseRespFromServer, getkv_error_cb, g_account, g_password, g_name+"QRcode");
+    }
+
+    else 
+    {
+		var resp = {"mValues":
+					{
+						"Account":"1",
+						"Status":"Success",
+						"Value":"no25",
+						"Key":"MaryBoardingGate",
+						"Action":"removeKeyValue" 
+					}
+				};
+				
+        if (!(currentStatus & CODE.GATE))
+		{
+			resp["mValues"]["Key"] = g_name+"BoardingGate";
+			resp["mValues"]["Value"] = "no22";
+            //parseRespFromServer("no22");
+		}
+        else if (!(currentStatus & CODE.TIME))
+		{
+			resp["mValues"]["Key"] = g_name+"BoardingTime";
+			resp["mValues"]["Value"] = "12:40";
+            //parseRespFromServer("12:40");
+		}
+        else if (!(currentStatus & CODE.DATE))
+		{
+			resp["mValues"]["Key"] = g_name+"Date";
+			resp["mValues"]["Value"] = "04/16/13";
+            //parseRespFromServer("09/29/12");
+		}
+        else if (!(currentStatus & CODE.FLIGHT))
+		{
+			resp["mValues"]["Key"] = g_name+"Flight";
+			resp["mValues"]["Value"] = "GH7812";
+			//parseRespFromServer("GH7812");
+		}
+        else if (!(currentStatus & CODE.SEAT))
+		{
+			resp["mValues"]["Key"] = g_name+"Seat";
+			resp["mValues"]["Value"] = "E 24";
+            //parseRespFromServer("E 24");
+		}
+        else if (!(currentStatus & CODE.QRCODE))
+		{
+			resp["mValues"]["Key"] = g_name+"QRcode";
+			resp["mValues"]["Value"] = "http://172.22.41.63/Pigeon/cpspStorage/QRcode.png";
+            //parseRespFromServer("http://172.22.41.63/Pigeon/cpspStorage/QRcode.png");
+		}
         else
         {
-            alert("xhr Errors Occured " + xhr.readyState + " and the status is " + xhr.status);
+            alert("invalid key");
+			getkv_error_cb("failed getting kv");
         }
+		parseRespFromServer(resp);
     }
-    else
-    {
-        //console.log("currently the application is at" + xhr.readyState);
-    }
-} 
+}
 
-// parse response from server side
-function parseServerResp(response)
+function parseRespFromServer(ret)
 {
-    if (!response['error'] || response['name'] != passengerName)
-    {
-        document.getElementById("labelName").innerHTML = response['name'];
-        document.getElementById("labelDate").innerHTML = response['date'];
-        document.getElementById("labelFlight").innerHTML = response['flight'];
-        document.getElementById("labelSeat").innerHTML = response['seat'];
-        document.getElementById("labelBoardingGate").innerHTML = response['gate'];
-        document.getElementById("labelBoardingTime").innerHTML = response['boardingTime'];
-
-        if ((document.getElementById("labelName").innerHTML != response['name']) && (document.getElementById("labelName").innerHTML != ""))
-        {
-            document.getElementById("labelName").className = "emphasis";
-            setTimeout('removeClass("labelName")', 5000);
-        }
-
-        if ((document.getElementById("labelDate").innerHTML != response['date']) && (document.getElementById("labelDate").innerHTML != ""))
-        {
-            document.getElementById("labelDate").className = "emphasis";
-            setTimeout('removeClass("labelDate")', 5000);
-        }
-        
-        if ((document.getElementById("labelFlight").innerHTML != response['flight']) && (document.getElementById("labelFlight").innerHTML != ""))
-        {
-            document.getElementById("labelFlight").className = "emphasis";
-            setTimeout('removeClass("labelFlight")', 5000);
-        }
-
-        if ((document.getElementById("labelSeat").innerHTML != response['seat']) && (document.getElementById("labelSeat").innerHTML != ""))
-        {
-            document.getElementById("labelSeat").className = "emphasis";
-            setTimeout('removeClass("labelSeat")', 5000);
-        }        
-
-        if ((document.getElementById("labelBoardingGate").innerHTML != response['gate']) && (document.getElementById("labelBoardingGate").innerHTML != ""))
-        {
-            document.getElementById("labelBoardingGate").className = "emphasis";
-            setTimeout('removeClass("labelBoardingGate")', 5000);
-        }
-
-        if ((document.getElementById("labelBoardingTime").innerHTML != response['boardingTime']) && (document.getElementById("labelBoardingTime").innerHTML != ""))
-        {
-            document.getElementById("labelBoardingTime").className = "emphasis";
-            setTimeout('removeClass("labelBoardingTime")', 5000);
-        }
-        
-        genQRcode(240, 240, encodeURI(JSON.stringify(response)));
-    }
-    else
-    {
-        alert(response['error'] + " - [" + response['name'] + "]");
-    }
+	if (pigeonEnable)
+		ret = eval('(' + ret + ')');
+	var key = ret["mValues"]["Key"];
+	var value = ret["mValues"]["Value"];
+	
+	switch (key)
+	{
+		case g_name+"BoardingGate":
+			currentStatus += CODE.GATE;
+			if ((document.getElementById("label_boardingGate").innerHTML != value) && (document.getElementById("label_boardingGate").innerHTML != ""))
+			{
+				document.getElementById("label_boardingGate").className = "emphasis";
+				setTimeout('removeClass("label_boardingGate")', 5000);
+			}
+			document.getElementById("label_boardingGate").innerHTML = value;
+			break;
+		case g_name+"BoardingTime":
+			currentStatus += CODE.TIME;
+			if ((document.getElementById("label_boardingTime").innerHTML != value) && (document.getElementById("label_boardingTime").innerHTML != ""))
+			{
+				document.getElementById("label_boardingTime").className = "emphasis";
+				setTimeout('removeClass("label_boardingTime")', 5000);
+			}			
+			document.getElementById("label_boardingTime").innerHTML = value;
+			break;
+		case g_name+"Date":
+			currentStatus += CODE.DATE;
+			if ((document.getElementById("label_date").innerHTML != value) && (document.getElementById("label_date").innerHTML != ""))
+			{
+				document.getElementById("label_date").className = "emphasis";
+				setTimeout('removeClass("label_date")', 5000);
+			}			
+			document.getElementById("label_date").innerHTML = value;
+			break;
+		case g_name+"Flight":
+			currentStatus += CODE.FLIGHT;
+			if ((document.getElementById("label_flight").innerHTML != value) && (document.getElementById("label_flight").innerHTML != ""))
+			{
+				document.getElementById("label_flight").className = "emphasis";
+				setTimeout('removeClass("label_flight")', 5000);
+			}				
+			document.getElementById("label_flight").innerHTML = value;
+			break;
+		case g_name+"Seat":
+			currentStatus += CODE.SEAT;
+			if ((document.getElementById("label_seat").innerHTML != value) && (document.getElementById("label_seat").innerHTML != ""))
+			{
+				document.getElementById("label_seat").className = "emphasis";
+				setTimeout('removeClass("label_seat")', 5000);
+			}				
+			document.getElementById("label_seat").innerHTML = value;
+			break;
+		case g_name+"QRcode":
+			currentStatus += CODE.QRCODE;
+			document.getElementById("div_qrcode").innerHTML = "<img src='"+value+"' />";
+			break;
+		default:
+			alert("invalid key in server resp " + key);
+			break
+	}
+	if (!(currentStatus == (CODE.END - 1)))
+		setTimeout("getKeyValue();", 100);
+	else if (!subChannel)
+		pigeon.subscribeChannel(messaging_success_cb, messaging_error_cb, "demo_pass", messaging_cb);
 }
 
-// generate qrcode 
-function genQRcode(width, height, content)
-{    
-    var qrcodeImg = 'http://chart.apis.google.com/chart?cht=qr&chl=' + content + '&chs=' + width + 'x' + height;
-    document.getElementById('qrcode').innerHTML = '<img src="' + qrcodeImg + '" />';
+
+function getkv_error_cb(ret)
+{
+	alert(ret);
 }
 
-// -------------------------------------
-// msghub callback handler
-// -------------------------------------
+// ------------------------------
+// msghub
+// ------------------------------
+
 function messaging_cb(channel, msg)
 {
     enterTimes += 1;
-    document.getElementById("message").innerHTML = "enter messaging_cb ("+ enterTimes +") <br />" + msg;
-    queryServer();
+    document.getElementById("message").innerHTML = "enter messaging_cb ("+ enterTimes +") <br />";
+	
+	currentStatus = 0;
+	getKeyValue();
 }
 
-
-// -------------------------------------
-// main
-// -------------------------------------
-function onloadBody()
+function messaging_success_cb(ret)
 {
-    passengerName = queryString("passengerName");
-    
+	subChannel = true;
+}
+
+function messaging_error_cb(ret)
+{
+	alert(ret);
+}
+
+function onloadBody()
+{   
     setContentSize();
-    queryServer();
-    
-    //subscribe('demo_pass', messaging_cb);
-    //document.getElementById("message").innerHTML = "sub ch demo_pass successfully!";
-    
-    /*
-    ret = pigeon.subscribeChannel('demo_pass', "messaging_cb");
-    if (ret.search("200") == -1)
-        alert("subscribeChannel Error: " + ret);
-    else
-        document.getElementById("message").innerHTML = "sub ch demo_pass successfully!";
-        */
+	g_name = queryString("name");
+	document.getElementById("label_name").innerHTML = g_name;
+	
+	if (pigeonEnable)
+		document.addEventListener("deviceready", onDeviceReady, false);
+	else
+		getKeyValue();
+}
+
+function onDeviceReady()
+{
+    getKeyValue();
 }
