@@ -123,7 +123,7 @@ function getKeyValue()
         else if (!(currentStatus & CODE.QRCODE))
 		{
 			resp["mValues"]["Key"] = g_name+"QRcode";
-			resp["mValues"]["Value"] = "http://172.22.41.63/Pigeon/cpspStorage/QRcode.png";
+			resp["mValues"]["Value"] = "http://Pass4.pigeonaws.tk/Pigeon/cpspStorage/QRcode.png";
             //parseRespFromServer("http://172.22.41.63/Pigeon/cpspStorage/QRcode.png");
 		}
         else
